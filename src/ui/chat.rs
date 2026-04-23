@@ -154,85 +154,15 @@ fn build_chat_lines(messages: &[Message], max_width: usize) -> Vec<Line<'static>
             },
         ]));
 
-        // Content lines (word-wrapped)
-        let content_lines = wrap_text(&message.content, max_width);
-        for content_line in content_lines {
-            lines.push(Line::from(vec![
-                Span::raw("  "), // Indent content
-                Span::styled(content_line, content_style),
-            ]));
+        // Content lines (markdown rendered)
+        let markdown_lines = super::markdown::parse_markdown(&message.content, max_width.saturating_sub(2), content_style);
+        for line in markdown_lines {
+            let mut spans = line.spans;
+            spans.insert(0, Span::raw("  ")); // Indent content
+            lines.push(Line::from(spans));
         }
     }
 
     lines
 }
 
-/// Simple word wrapping
-fn wrap_text(text: &str, max_width: usize) -> Vec<String> {
-    if max_width == 0 {
-        return vec![text.to_string()];
-    }
-
-    let mut lines = Vec::new();
-    
-    for paragraph in text.split('\n') {
-        if paragraph.is_empty() {
-            lines.push(String::new());
-            continue;
-        }
-
-        let mut current_line = String::new();
-        
-        for word in paragraph.split_whitespace() {
-            if current_line.is_empty() {
-                if word.len() > max_width {
-                    // Word is too long, split it
-                    for chunk in word.chars().collect::<Vec<_>>().chunks(max_width) {
-                        lines.push(chunk.iter().collect());
-                    }
-                } else {
-                    current_line = word.to_string();
-                }
-            } else if current_line.len() + 1 + word.len() <= max_width {
-                current_line.push(' ');
-                current_line.push_str(word);
-            } else {
-                lines.push(current_line);
-                current_line = word.to_string();
-            }
-        }
-        
-        if !current_line.is_empty() {
-            lines.push(current_line);
-        }
-    }
-
-    if lines.is_empty() {
-        lines.push(String::new());
-    }
-
-    lines
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_wrap_text_simple() {
-        let result = wrap_text("hello world", 20);
-        assert_eq!(result, vec!["hello world"]);
-    }
-
-    #[test]
-    fn test_wrap_text_multiline() {
-        let result = wrap_text("hello world this is a test", 10);
-        assert_eq!(result, vec!["hello", "world this", "is a test"]);
-    }
-
-    #[test]
-    fn test_wrap_text_newlines() {
-        let result = wrap_text("line1\nline2", 20);
-        assert_eq!(result, vec!["line1", "line2"]);
-    }
-}
