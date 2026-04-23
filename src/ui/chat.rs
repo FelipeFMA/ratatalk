@@ -119,7 +119,7 @@ fn build_chat_lines(messages: &[Message], max_width: usize) -> Vec<Line<'static>
         }
 
         // Role indicator and styling
-        let (role_prefix, role_style, content_style) = match message.role {
+        let (role_prefix, role_style, mut content_style) = match message.role {
             Role::User => (
                 "You",
                 Style::default().fg(colors::USER_MSG).add_modifier(Modifier::BOLD),
@@ -132,7 +132,7 @@ fn build_chat_lines(messages: &[Message], max_width: usize) -> Vec<Line<'static>
                     styles::streaming()
                 } else {
                     Style::default().fg(colors::ASSISTANT_MSG)
-                },
+                }
             ),
             Role::System => (
                 "System",
@@ -140,6 +140,12 @@ fn build_chat_lines(messages: &[Message], max_width: usize) -> Vec<Line<'static>
                 Style::default().fg(colors::SYSTEM_MSG),
             ),
         };
+
+        // Special styling for error messages
+        if message.content.starts_with("[Error:") {
+            content_style = styles::error();
+        }
+
 
         // Header line with role and optional timestamp
         let timestamp = message.timestamp.format("%H:%M").to_string();
